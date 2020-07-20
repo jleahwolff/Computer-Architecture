@@ -2,12 +2,16 @@
 
 import sys
 
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0] * 256
+        self.reg = [0] * 8
+        self.pc = 0
+        self.is_running = True
 
     def load(self):
         """Load a program into memory."""
@@ -15,28 +19,25 @@ class CPU:
         address = 0
 
         # For now, we've just hardcoded a program:
-
         program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
+            0b10000010,
             0b00000000,
             0b00001000,
-            0b01000111, # PRN R0
+            0b01000111,
             0b00000000,
-            0b00000001, # HLT
+            0b00000001,
         ]
 
         for instruction in program:
             self.ram[address] = instruction
             address += 1
 
-
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -48,8 +49,8 @@ class CPU:
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            #self.fl,
-            #self.ie,
+            # self.fl,
+            # self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
             self.ram_read(self.pc + 2)
@@ -62,4 +63,27 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+        while self.is_running:
+            # read the ram at that address and find if it is a command or value
+            instruction = self.ram_read(self.pc)
+            if instruction == 0b10000010:  # LDI
+                reg_address = self.ram_read(self.pc + 1)
+                reg_value = self.ram_read(self.pc + 2)
+                self.reg[reg_address] = reg_value
+                self.pc += 3
+            elif instruction == 0b01000111:  # PRN
+                print(int(self.reg[self.ram_read(self.pc + 1)]))
+                self.pc += 2
+            elif instruction == 0b00000001:  # HLT
+                self.is_running = False
+            else:
+                self.pc += 1
+
+            if self.pc > 255:
+                self.is_running = False
+
+    def ram_read(self, mar):
+        return self.ram[mar]
+
+    def ram_write(self, mdr, value):
+        self.ram[mdr] = value
