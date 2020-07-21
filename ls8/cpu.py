@@ -11,26 +11,37 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.sp = 255
         self.is_running = True
 
-    def load(self):
+    def load(self, p):
         """Load a program into memory."""
 
         address = 0
 
         # For now, we've just hardcoded a program:
-        program = [
-            0b10000010,
-            0b00000000,
-            0b00001000,
-            0b01000111,
-            0b00000000,
-            0b00000001,
-        ]
+        # program = [
+        #     0b10000010,
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111,
+        #     0b00000000,
+        #     0b00000001,
+        # ]
+        with open(p) as program:
+            for line in program:
+                instruction = line.split('#')[0].strip()
+                if instruction != '':
+                    try:
+                        self.ram[address] = int(instruction, 2)
+                        address += 1
+                    except IndexError:
+                        print('Memory overflow!')
+                        return
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+            # for instruction in program:
+            #     self.ram[address] = instruction
+            #     address += 1
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -71,6 +82,26 @@ class CPU:
                 reg_value = self.ram_read(self.pc + 2)
                 self.reg[reg_address] = reg_value
                 self.pc += 3
+            elif instruction == 0b10100010:  # MULT
+                # store values in regA and regB
+                regA = self.ram_read(self.pc + 1)
+                regB = self.ram_read(self.pc + 2)
+                # store product in regA
+                self.reg[regA] = self.reg[regA] * self.reg[regB]
+                self.pc += 3
+            elif instruction == 0b01000101:  # PUSH
+                # push to R7
+                self.sp -= 1
+                mdr = self.reg[self.ram_read(self.pc + 1)]
+                self.ram_write(self.sp, mdr)
+                self.pc += 2
+            elif instruction == 0b01000110:  # POP
+                # pop to R8
+                regA = self.ram_read(self.pc + 1)
+                mdr = self.ram_read(self.sp)
+                self.reg[regA] = mdr
+                self.pc += 2
+                self.sp += 1
             elif instruction == 0b01000111:  # PRN
                 print(int(self.reg[self.ram_read(self.pc + 1)]))
                 self.pc += 2
